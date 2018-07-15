@@ -481,8 +481,7 @@ RECONFIG_PARAM_TYPES = {
 class InboundStream:
     def __init__(self, callback):
         self.reassembly = []
-        self.messages = asyncio.Queue()
-        asyncio.ensure_future(self.pop_messages_task(callback))
+        self.message_cb = callback
         self.sequence_number = 0
 
     async def add_chunk(self, chunk):
@@ -521,7 +520,7 @@ class InboundStream:
                 user_data += rchunk.user_data
 
             if rchunk.flags & SCTP_DATA_LAST_FRAG:
-                await self.messages.put((rchunk.stream_id, rchunk.protocol, user_data))
+                await self.message_cb(rchunk.stream_id, rchunk.protocol, user_data)
                 complete = True
 
             expected_tsn = tsn_plus_one(expected_tsn)
@@ -531,11 +530,6 @@ class InboundStream:
             self.reassembly = list(filter(
                 lambda x: x.stream_seq != chunk.stream_seq, self.reassembly
                 ))
-
-    async def pop_messages_task(self, callback):
-        while True:
-            await callback(await self.messages.get())
-            self.messages.task_done()
 
 
 @attr.s
@@ -882,7 +876,7 @@ class RTCSctpTransport(EventEmitter):
             if self._mark_received(chunk.tsn):
                 return
 
-            async def on_message(message):
+            async def on_message(*message):
                 self._advertised_rwnd += len(message[2])
                 await self._receive(*message)
 
