@@ -490,7 +490,7 @@ class InboundStream:
 
         # should never happen, this would mean receiving a chunk
         # for a message that has already been fully re-assembled
-        assert seq_gte(chunk.stream_seq, self.sequence_number)
+        # assert seq_gte(chunk.stream_seq, self.sequence_number)
 
         for i, rchunk in enumerate(self.reassembly):
             # should never happen, the chunk should have been eliminated
