@@ -477,8 +477,6 @@ RECONFIG_PARAM_TYPES = {
     17: StreamAddOutgoingParam
 }
 
-from operator import attrgetter
-from itertools import groupby
 
 class InboundStream:
     def __init__(self, callback):
@@ -506,12 +504,12 @@ class InboundStream:
         pos = pos or len(self.reassembly)
 
         self.reassembly.append(chunk)
+        self.reassembly.sort()
 
         complete = False
         for rchunk in filter(
                 lambda x: x.stream_seq == chunk.stream_seq, self.reassembly
                 ):
-            user_data = None
             if rchunk.flags & SCTP_DATA_FIRST_FRAG:
                 expected_tsn = rchunk.tsn
                 user_data = rchunk.user_data
@@ -536,7 +534,8 @@ class InboundStream:
 
     async def pop_messages_task(self, callback):
         while True:
-            callback(await self.messages.get())
+            await callback(await self.messages.get())
+            self.messages.task_done()
 
 
 @attr.s
@@ -883,7 +882,7 @@ class RTCSctpTransport(EventEmitter):
             if self._mark_received(chunk.tsn):
                 return
 
-            def on_message(message):
+            async def on_message(message):
                 self._advertised_rwnd += len(message[2])
                 await self._receive(*message)
 
@@ -1227,7 +1226,7 @@ class RTCSctpTransport(EventEmitter):
 
                 # send data
                 await self._send(stream_id, protocol, user_data)
-                await self._data_channel_queue.task_done()
+                self._data_channel_queue.task_done()
             # wait for ESTABLISHED
             await asyncio.sleep(0.1)
 
