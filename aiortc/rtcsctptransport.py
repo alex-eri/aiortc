@@ -207,6 +207,7 @@ class DataChunk(Chunk):
         return 'DataChunk(flags=%d, tsn=%d, stream_id=%d, stream_seq=%d)' % (
             self.flags, self.tsn, self.stream_id, self.stream_seq)
 
+    # sorting
     def __lt__(self, other):
         return not tsn_gte(self.tsn, other.tsn)
 
@@ -503,7 +504,7 @@ class InboundStream:
         pos = pos or len(self.reassembly)
 
         self.reassembly.append(chunk)
-        self.reassembly.sort()
+        # self.reassembly.sort()
 
         complete = False
         for rchunk in filter(
@@ -513,7 +514,7 @@ class InboundStream:
                 expected_tsn = rchunk.tsn
                 user_data = rchunk.user_data
             else:
-                if user_data is None: # no first
+                if user_data is None: # not first
                     break
                 if rchunk.tsn != expected_tsn:
                     break
