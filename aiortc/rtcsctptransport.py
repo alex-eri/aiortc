@@ -507,6 +507,7 @@ class InboundStream:
         # self.reassembly.sort()
 
         complete = False
+        user_data = None
         for rchunk in filter(
                 lambda x: x.stream_seq == chunk.stream_seq, self.reassembly
                 ):
